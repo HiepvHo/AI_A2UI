@@ -22,8 +22,8 @@ if not PINECONE_API_KEY:
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "emotion-chatbot-index")
 
 # ========== EMBEDDING CONFIG ==========
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "384"))
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "8"))
 

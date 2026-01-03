@@ -42,8 +42,8 @@ DB_PASSWORD=your_db_password
 DB_NAME=db_chatbotllm
 
 # Embedding
-EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-EMBEDDING_DIMENSION=384
+EMBEDDING_MODEL=intfloat/multilingual-e5-base
+EMBEDDING_DIMENSION=768
 ```
 
 ### 3. Khởi tạo Database
