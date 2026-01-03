@@ -10,7 +10,6 @@ pydantic-settings==2.5.0
 
 # AI & Machine Learning
 groq==1.0.0  # Llama 3.3 70B via Groq
-embed-anything==0.7.0
 pinecone-client==5.0.1
 sentence-transformers==3.3.1
 
