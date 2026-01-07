@@ -4,6 +4,7 @@ SQLAlchemy Models - Emotion Chatbot
 Database models cho emotion tracking va chatbot
 """
 
+import json
 from sqlalchemy import Column, Integer, String, Numeric, Date, Time, ForeignKey, Text, JSON, TIMESTAMP, Boolean, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

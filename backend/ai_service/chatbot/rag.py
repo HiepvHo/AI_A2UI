@@ -33,47 +33,49 @@ class RAGSystem:
         self.model = LLM_MODEL
         
         # System prompt - Optimized for LLM understanding (English for better comprehension)
-        self.system_prompt = """You are a friendly, warm emotional health companion. Chat naturally in Vietnamese, like a real friend, not a robot.
+        self.system_prompt = """You are a warm, caring emotional friend who listens and supports. Chat naturally in Vietnamese, like a close friend sharing feelings, NOT a robot or data analyst.
 
 CORE BEHAVIOR:
-- Read the user's question and context carefully, understand their true intent
-- Match response tone: friendly when positive, warm when negative, serious when crisis
-- Match response length: short for short questions, detailed when explanation needed
-- Never repeat user's question verbatim, avoid robotic patterns
-- Be natural, flexible, adapt to each situation - no rigid templates
+- Be empathetic, warm, and genuine - like talking to a friend over coffee
+- Show real care and understanding, not just information
+- Match response tone: gentle and supportive when negative emotions, happy and encouraging when positive
+- Keep responses conversational and natural - avoid sounding like a textbook or report
+- Never sound robotic or mechanical - be human, be real
 
-RESPONSE STYLE:
-- Use everyday Vietnamese language, easy to understand, friendly
-- Show genuine care, not empty phrases
-- Only say what's necessary, avoid long lists
-- Use emojis when appropriate, but don't overuse
+RESPONSE STYLE (CRITICAL):
+- Use warm, friendly Vietnamese: "bạn có thể... nè", "cố gắng lên nhé", "mình hiểu bạn đang...", "đừng lo nhé"
+- Show genuine empathy: "Mình thấy bạn đang...", "Chắc bạn cảm thấy...", "Mình hiểu..."
+- Be encouraging: "Bạn làm tốt lắm", "Cố gắng lên nhé", "Mình tin bạn sẽ..."
+- Avoid cold, technical language - NO "mức độ cường độ", NO excessive statistics
+- When mentioning intensity/emotion strength, say "cảm xúc mạnh/nhẹ" or "bạn cảm thấy rất..." instead of numbers
+- Keep it simple and heartfelt - focus on feelings, not data
 
-RAG KNOWLEDGE BASE USAGE (CRITICAL):
-- You will receive context documents from a psychology/emotion knowledge base
-- ALWAYS prioritize and reference information from these documents when answering
-- When using knowledge base info, naturally reference it: "Dựa vào tri thức tâm lý...", "Theo tài liệu chuyên môn...", "Từ nghiên cứu về..."
-- If knowledge base has relevant info, USE IT. If not, be honest: "Mình không có thông tin cụ thể về..."
-- NEVER make up information if knowledge base doesn't have it
-- Knowledge base documents are your primary source of expertise
+RAG KNOWLEDGE BASE USAGE:
+- You will receive context documents from psychology/emotion knowledge base
+- Use this knowledge SPARINGLY and naturally - only when truly relevant
+- When referencing knowledge, say it casually: "Mình có đọc về...", "Có nghiên cứu cho thấy..." - NOT "Dựa vào tri thức tâm lý" every time
+- DON'T over-reference knowledge base - be a friend first, expert second
+- If knowledge base has relevant info, weave it in naturally. If not, rely on empathy and common sense
+- NEVER make up information
 
-CHART GENERATION (CONDITIONAL):
-- When user asks about statistics, trends, analytics, or data, the system MAY attempt to generate a chart
-- IMPORTANT: Only mention or describe a chart if you receive explicit confirmation that a chart was successfully generated
-- If a chart section is provided in your instructions, it means a chart was successfully created - acknowledge it naturally
-- If no chart section is provided, DO NOT mention charts, biểu đồ, or data visualization - respond based on knowledge base only
-- Never hallucinate or make up chart data - only reference charts that actually exist
+CHART/ANALYTICS HANDLING:
+- When user asks about statistics/trends, the system MAY generate a chart
+- If chart is generated, mention it briefly and naturally: "Để mình xem dữ liệu...", "Mình thấy từ biểu đồ..."
+- Focus on WHAT the data MEANS for the user's feelings, NOT the numbers themselves
+- Avoid listing dates, exact numbers, percentages - instead say "bạn có nhiều ngày cảm thấy...", "cảm xúc chủ yếu là..."
+- If no chart, don't mention it - just respond as a caring friend
 
 SAFETY PRIORITY:
 - If crisis detected (suicide, severe depression), prioritize safety immediately
-- Encourage professional help: hotline, therapist, trusted person
-- Be direct and supportive, not vague
+- Be direct, warm, and supportive - encourage professional help
+- Show genuine concern, not just protocol
 
 RESPONSE PRINCIPLES:
-- Use conversation history naturally, don't over-repeat
-- Be empathetic, non-judgmental
-- No medical diagnosis, only support and suggestions
-- Each response should be context-specific, not generic templates
-- Adapt flexibly to each situation"""
+- Be a friend who listens and understands, not a data analyst
+- Focus on emotions and feelings, not statistics
+- Use warm, encouraging language
+- Keep it natural and conversational
+- Show empathy and care in every response"""
     
     async def generate_response(
         self, 
@@ -121,49 +123,52 @@ RESPONSE PRINCIPLES:
             
             # Detect neu cau hoi yeu cau analytics (chart)
             needs_analytics = self._detect_analytics_intent(query)
-            logger.info(f"[ANALYTICS] Detection: {needs_analytics} | Query: {query[:80]}")
+            logger.debug(f"Analytics detection: {needs_analytics}")
             
             chart_spec = None
             chart_id = None
             chart_title = None
             sql_query = None
             
+            sql_result = None
             if needs_analytics:
-                logger.info(f"[ANALYTICS] Starting pipeline for user_id={user_id}")
+                logger.debug(f"Analytics pipeline: user_id={user_id}")
                 sql_generator = await get_sql_generator()
                 sql_result = await sql_generator.text_to_data(query, user_id)
                 
-                logger.info(f"[ANALYTICS] SQL result: success={sql_result.get('success')}, has_data={bool(sql_result.get('data'))}, row_count={len(sql_result.get('data', []))}")
+                logger.debug(f"SQL result: success={sql_result.get('success')}, rows={sql_result.get('row_count', 0)}")
                 
                 if sql_result.get('sql'):
-                    logger.info(f"[ANALYTICS] Generated SQL: {sql_result['sql'][:150]}...")
+                    logger.debug(f"Generated SQL: {sql_result['sql'][:100]}...")
                 
                 if not sql_result.get('success'):
                     error_msg = sql_result.get('error', 'Unknown error')
-                    logger.error(f"[ANALYTICS] SQL generation failed: {error_msg}")
-                elif not sql_result.get('data') or len(sql_result.get('data', [])) == 0:
-                    logger.warning(f"[ANALYTICS] SQL executed but returned no data. SQL: {sql_result.get('sql', 'N/A')[:100]}")
+                    logger.error(f"SQL generation failed: {error_msg}")
+                elif not sql_result.get('data') or sql_result.get('row_count', 0) == 0:
+                    logger.warning(f"SQL returned no data")
+                    # Không tạo chart nhưng vẫn giữ sql_result để truyền cho LLM
                 else:
                     data = sql_result['data']
                     chart_type = sql_result.get('chart_type', 'bar')
-                    logger.info(f"[ANALYTICS] Generating chart: type={chart_type}, rows={len(data)}, x={sql_result.get('x_column')}, y={sql_result.get('y_column')}")
+                    logger.debug(f"Generating chart: type={chart_type}, rows={len(data)}")
                     
                     chart_generator = get_chart_generator()
+                    # explanation từ SQL generator đã là user-friendly, dùng làm chart title
+                    chart_title = sql_result.get('explanation', 'Biểu đồ cảm xúc')
                     chart_spec = chart_generator.generate_chart(
                         data=data,
                         chart_type=chart_type,
                         x_column=sql_result.get('x_column'),
                         y_column=sql_result.get('y_column'),
-                        title=sql_result.get('explanation', 'Biểu đồ cảm xúc')
+                        title=chart_title
                     )
                     
                     if chart_spec and chart_spec.get('data') and chart_spec.get('layout'):
                         chart_id = f"chart_{session_id or 'default'}"
-                        chart_title = sql_result.get('explanation', '')
                         sql_query = sql_result['sql']
-                        logger.info(f"[ANALYTICS] Chart generated: chart_id={chart_id}, has_data={bool(chart_spec.get('data'))}, has_layout={bool(chart_spec.get('layout'))}")
+                        logger.debug(f"Chart generated: {chart_id}")
                     else:
-                        logger.error(f"[ANALYTICS] Chart generation returned invalid spec. Keys: {chart_spec.keys() if chart_spec else 'None'}")
+                        logger.error(f"Chart generation failed: invalid spec")
             
             # Build context sections for LLM
             context_section = ""
@@ -178,17 +183,129 @@ RESPONSE PRINCIPLES:
             if crisis_detected:
                 crisis_section = "\n\nCRISIS DETECTED: User shows signs of crisis. Prioritize safety immediately. Encourage professional help."
             
+            # SQL Analytics Section - CRITICAL: Always include when analytics detected
+            sql_analytics_section = ""
+            if needs_analytics and sql_result:
+                if sql_result.get('success') and sql_result.get('row_count', 0) > 0:
+                    # Có data - phân tích cụ thể
+                    data = sql_result.get('data', [])
+                    row_count = sql_result.get('row_count', 0)
+                    sql_query = sql_result.get('sql', '')
+                    
+                    # Format data sample cho LLM - Format tốt hơn để LLM dễ phân tích
+                    data_sample = data[:20] if len(data) > 20 else data  # Lấy 20 rows để có đủ context
+                    data_summary = f"Total rows: {row_count}"
+                    if data_sample:
+                        data_summary += f"\n\nDetailed data (first {len(data_sample)} rows):\n"
+                        for i, row in enumerate(data_sample, 1):
+                            # Format row để dễ đọc
+                            row_str = f"Row {i}: "
+                            if 'date' in row:
+                                row_str += f"Date: {row['date']}, "
+                            if 'emotion_labels' in row and row['emotion_labels']:
+                                labels = row['emotion_labels'] if isinstance(row['emotion_labels'], list) else [row['emotion_labels']]
+                                row_str += f"Cảm xúc: {', '.join(labels)}, "
+                            if 'triggers' in row and row['triggers']:
+                                triggers = row['triggers'] if isinstance(row['triggers'], list) else [row['triggers']]
+                                row_str += f"Lý do: {', '.join(triggers)}, "
+                            if 'intensity' in row:
+                                intensity_desc = "rất nhẹ" if row['intensity'] <= 2 else "nhẹ" if row['intensity'] == 3 else "mạnh" if row['intensity'] == 4 else "rất mạnh"
+                                row_str += f"Cảm xúc {intensity_desc} ({row['intensity']}/5), "
+                            if 'topic_id' in row and row['topic_id']:
+                                row_str += f"Topic ID: {row['topic_id']}, "
+                            if 'note' in row and row['note']:
+                                row_str += f"Note: {row['note'][:50]}..."
+                            data_summary += row_str.rstrip(', ') + "\n"
+                    
+                    sql_analytics_section = f"""
+SQL ANALYTICS RESULT (CRITICAL - You MUST analyze this actual data):
+- SQL Query: {sql_query[:200]}...
+- {data_summary}
+- Chart type: {sql_result.get('chart_type', 'bar')}
+- X column: {sql_result.get('x_column')}, Y column: {sql_result.get('y_column')}
+
+IMPORTANT - UNDERSTAND USER'S FEELINGS (NOT JUST DATA):
+1. EMOTION LABELS (emotion_labels): These are the user's actual feelings (e.g., "buon", "vui", "lo au", "stress", "gian")
+   - Focus on WHAT the user felt, not just counting occurrences
+   - Talk about emotions naturally: "bạn có nhiều ngày cảm thấy buồn", "mình thấy bạn có cảm xúc..."
+   - Avoid listing exact numbers - say "nhiều ngày", "một số ngày", "thường xuyên"
+   - Show empathy: "Chắc bạn đã trải qua những ngày khó khăn khi cảm thấy..."
+
+2. TRIGGERS (triggers): These are reasons/causes for emotions (e.g., "cong viec", "gia dinh")
+   - Help user understand WHY they felt certain emotions
+   - Connect triggers to feelings naturally: "Có vẻ như công việc đã khiến bạn..."
+   - Be understanding, not analytical: "Mình hiểu khi bạn gặp vấn đề về..."
+
+3. EMOTION STRENGTH: This is how strong the feeling was (1-5, where 1=very mild, 5=very strong)
+   - NEVER say "mức độ cường độ" or "intensity"
+   - Instead say: "bạn cảm thấy rất mạnh", "cảm xúc khá nhẹ", "bạn cảm thấy rất..."
+   - Focus on the feeling, not the number: "Bạn đã trải qua những cảm xúc mạnh mẽ"
+
+4. TOPIC_ID: Emotion topic names (if available) - mention naturally if relevant
+
+RESPONSE REQUIREMENTS (CRITICAL):
+- Be a caring friend, NOT a data analyst
+- Focus on understanding the user's emotional journey, not statistics
+- Use warm, empathetic language: "Mình thấy bạn...", "Chắc bạn đã...", "Mình hiểu..."
+- Avoid cold data language: NO "tỷ lệ", NO "thống kê", NO "dữ liệu cho thấy"
+- Instead say: "Mình thấy bạn có nhiều ngày...", "Có vẻ như bạn thường cảm thấy...", "Mình nhận thấy..."
+- Provide genuine emotional support and understanding
+- Suggest improvements warmly: "Bạn có thể thử...", "Mình nghĩ bạn nên...", "Cố gắng lên nhé"
+- Keep it conversational and heartfelt
+- Respond in Vietnamese with natural, warm language
+"""
+                elif sql_result.get('success') and sql_result.get('row_count', 0) == 0:
+                    # Không có data - giải thích rõ và đề xuất
+                    sql_query = sql_result.get('sql', '')
+                    data_range = sql_result.get('data_range', {})
+                    
+                    range_info = ""
+                    if data_range and data_range.get('success'):
+                        min_date = data_range.get('min_date')
+                        max_date = data_range.get('max_date')
+                        total_rows = data_range.get('total_rows', 0)
+                        if min_date and max_date:
+                            range_info = f"\n- Database có data từ {min_date} đến {max_date} (tổng {total_rows} bản ghi)"
+                        elif total_rows == 0:
+                            range_info = "\n- Database không có dữ liệu cảm xúc nào"
+                    
+                    sql_analytics_section = f"""
+SQL ANALYTICS RESULT (CRITICAL):
+- SQL Query executed: {sql_query[:200]}...
+- Result: 0 rows returned (no data found for the requested time range)
+{range_info}
+
+IMPORTANT: 
+- Tell the user clearly in Vietnamese that no data was found for their requested time range
+- If data_range is provided, mention the actual date range available in database
+- Suggest an alternative time range that matches available data
+- DO NOT give generic responses about emotions - be specific about the data issue
+- Example response in Vietnamese: "Mình không tìm thấy dữ liệu cảm xúc trong 7 ngày qua. Database của bạn có data từ [min_date] đến [max_date]. Bạn có muốn xem phân tích trong khoảng thời gian đó không?"
+"""
+                elif not sql_result.get('success'):
+                    # SQL error
+                    error_msg = sql_result.get('error', 'Unknown error')
+                    sql_analytics_section = f"""
+SQL ANALYTICS RESULT (ERROR):
+- SQL generation/execution failed: {error_msg}
+- Tell the user that analytics could not be performed due to a technical issue
+- Suggest they try rephrasing their question or ask about a different time period
+"""
+            
             chart_section = ""
             if needs_analytics and chart_spec and chart_spec.get('data') and chart_spec.get('layout'):
-                chart_section = "\n\nCHART SUCCESSFULLY GENERATED: A chart has been created and will be displayed below. In your response, acknowledge the chart naturally (e.g., 'Để mình xem dữ liệu...', 'Dựa vào thống kê...', 'Mình thấy từ biểu đồ...') and explain what it shows based on the actual data."
-            elif needs_analytics:
-                chart_section = "\n\nNO CHART AVAILABLE: User is asking for analytics/statistics, but no chart could be generated (no data available or query error). DO NOT mention charts, biểu đồ, or data visualization. Respond naturally based on knowledge base information only, without any reference to charts or visualizations."
+                chart_section = "\n\nCHART SUCCESSFULLY GENERATED: A chart has been created and will be displayed below. In your response, mention it briefly and naturally (e.g., 'Để mình xem dữ liệu...', 'Mình thấy từ biểu đồ...'). Focus on WHAT the data MEANS for the user's feelings, NOT listing numbers or statistics. Be warm and empathetic, like a friend explaining what they see."
+            elif needs_analytics and sql_result and sql_result.get('row_count', 0) == 0:
+                chart_section = "\n\nNO CHART GENERATED: No data available for chart. Explain this warmly and suggest alternatives, like a caring friend would."
             
-            full_prompt = f"""{self.system_prompt}{history_section}{context_section}{crisis_section}{chart_section}
-
-USER QUESTION: {query}
-
-Respond naturally in Vietnamese, flexibly adapting to this specific situation. Use knowledge base information if provided and relevant."""
+            full_prompt = f"""{self.system_prompt}{history_section}{context_section}{crisis_section}{sql_analytics_section}{chart_section}
+            
+            USER QUESTION: {query}
+            
+Respond naturally in Vietnamese, flexibly adapting to this specific situation. 
+- If SQL ANALYTICS RESULT is provided, you MUST analyze the actual data (not generic responses)
+- Use knowledge base information only as supplementary context
+- Be specific with numbers, dates, and actual data values"""
             
             # Generate answer using Groq
             response = self.groq_client.chat.completions.create(
@@ -204,18 +321,32 @@ Respond naturally in Vietnamese, flexibly adapting to this specific situation. U
             
             # Generate A2UI blocks
             a2ui_gen = get_a2ui_generator()
+            # Tạo câu chốt tổng kết cho câu hỏi của user dựa trên dữ liệu thực tế
+            summary_insight = None
+            if needs_analytics and sql_result:
+                if sql_result.get('row_count', 0) > 0:
+                    # Có data - tạo câu chốt tổng kết dựa trên dữ liệu thực tế
+                    row_count = sql_result.get('row_count', 0)
+                    data_sample = data[:30] if len(data) > 30 else data  # Lấy 30 rows để phân tích
+                    # Tạo câu chốt tổng kết với phân tích thực tế
+                    summary_insight = await self._generate_summary_insight(query, row_count, data_sample)
+                else:
+                    # Không có data
+                    summary_insight = "Chưa có dữ liệu trong khoảng thời gian này"
+            
             a2ui_input = {
                 'answer': answer,
                 'chart_spec': chart_spec,
                 'chart_id': chart_id,
                 'chart_title': chart_title,
-                'insights': chart_title if chart_spec else None,
-                'suggestions': suggestions
+                'insights': summary_insight,  # Câu chốt cho câu hỏi, không phải mô tả SQL
+                'suggestions': suggestions,
+                'user_query': query  # Thêm user query để có context
             }
-            logger.info(f"[A2UI] Input: has_chart_spec={bool(chart_spec)}, chart_id={chart_id}, has_suggestions={bool(suggestions)}")
+            logger.debug(f"A2UI input: chart={bool(chart_spec)}, suggestions={bool(suggestions)}")
             
             a2ui_blocks = a2ui_gen.create_blocks_from_response(a2ui_input)
-            logger.info(f"[A2UI] Generated {len(a2ui_blocks)} blocks: types={[b.get('type') for b in a2ui_blocks]}")
+            logger.debug(f"A2UI: {len(a2ui_blocks)} blocks")
             
             # Save chat history to PostgreSQL
             if session_id:
@@ -250,7 +381,7 @@ Respond naturally in Vietnamese, flexibly adapting to this specific situation. U
                 'session_id': session_id
             }
             
-            logger.info(f"[RESPONSE] Final: has_chart_spec={bool(chart_spec)}, a2ui_blocks={len(a2ui_blocks)}, sources={len(response['sources'])}")
+            logger.debug(f"Response: chart={bool(chart_spec)}, blocks={len(a2ui_blocks)}, sources={len(response['sources'])}")
             return response
             
         except Exception as e:
@@ -320,20 +451,17 @@ Respond naturally in Vietnamese, flexibly adapting to this specific situation. U
         # Check keywords first (fastest)
         for keyword in analytics_keywords:
             if keyword in query_lower:
-                logger.debug(f"[DETECT] Matched keyword: {keyword}")
                 return True
         
         # Check time patterns
         import re
         for pattern in time_patterns:
             if re.search(pattern, query_lower):
-                logger.debug(f"[DETECT] Matched time pattern: {pattern}")
                 return True
         
         # Check question patterns (phai co it nhat 2 patterns)
         question_matches = sum(1 for pattern in question_patterns if re.search(pattern, query_lower))
         if question_matches >= 2:
-            logger.debug(f"[DETECT] Matched {question_matches} question patterns")
             return True
         
         return False
@@ -398,6 +526,116 @@ Generate ONE suggestion sentence:"""
             # Fallback suggestion
             return "Bạn có thể hỏi tôi về các phương pháp cải thiện tâm trạng hoặc cách quản lý cảm xúc."
     
+    async def _generate_summary_insight(self, query: str, row_count: int, data_sample: List[Dict]) -> str:
+        """
+        Generate câu chốt tổng kết cho câu hỏi của user dựa trên dữ liệu thực tế
+        Format: "Cảm xúc X ngày qua của bạn cho thấy [phân tích]. Bạn nên [gợi ý]."
+        """
+        try:
+            # Phân tích dữ liệu để tạo summary
+            emotions_count = {}
+            triggers_count = {}
+            intensity_sum = 0
+            intensity_count = 0
+            negative_emotions = ['buon', 'lo', 'lo au', 'stress', 'gian', 'buc', 'tram cam', 'so hai']
+            positive_emotions = ['vui', 'hanh phuc', 'tu tin', 'nang dong', 'yeu doi']
+            
+            for row in data_sample:
+                # Đếm emotions
+                if 'emotion_labels' in row and row['emotion_labels']:
+                    labels = row['emotion_labels'] if isinstance(row['emotion_labels'], list) else [row['emotion_labels']]
+                    for label in labels:
+                        if label:
+                            emotions_count[label] = emotions_count.get(label, 0) + 1
+                
+                # Đếm triggers
+                if 'triggers' in row and row['triggers']:
+                    triggers = row['triggers'] if isinstance(row['triggers'], list) else [row['triggers']]
+                    for trigger in triggers:
+                        if trigger:
+                            triggers_count[trigger] = triggers_count.get(trigger, 0) + 1
+                
+                # Tính intensity trung bình
+                if 'intensity' in row and row['intensity'] is not None:
+                    intensity_sum += row['intensity']
+                    intensity_count += 1
+            
+            # Tìm emotions và triggers phổ biến nhất
+            top_emotions = sorted(emotions_count.items(), key=lambda x: x[1], reverse=True)[:3]
+            top_triggers = sorted(triggers_count.items(), key=lambda x: x[1], reverse=True)[:2]
+            avg_intensity = intensity_sum / intensity_count if intensity_count > 0 else 0
+            
+            # Phân loại cảm xúc chủ đạo
+            negative_count = sum(emotions_count.get(em, 0) for em in negative_emotions)
+            positive_count = sum(emotions_count.get(em, 0) for em in positive_emotions)
+            
+            # Tạo data summary cho LLM
+            data_summary = f"Total records: {row_count}\n"
+            if top_emotions:
+                data_summary += f"Top emotions: {', '.join([f'{em}({count})' for em, count in top_emotions])}\n"
+            if top_triggers:
+                data_summary += f"Top triggers: {', '.join([f'{tr}({count})' for tr, count in top_triggers])}\n"
+            if avg_intensity > 0:
+                data_summary += f"Average intensity: {avg_intensity:.1f}/5\n"
+            data_summary += f"Negative emotions: {negative_count}, Positive emotions: {positive_count}\n"
+            
+            prompt = f"""Based on the user's question and actual emotion data, generate ONE warm, empathetic summary sentence in Vietnamese that:
+1. Shows understanding of the user's emotional journey
+2. Uses warm, friendly language like a caring friend
+3. Provides gentle encouragement
+
+User question: {query}
+Emotion patterns from data:
+{data_summary}
+
+Requirements:
+- ONE complete sentence (max 150 characters)
+- Warm, conversational Vietnamese - like a friend talking
+- Use phrases like: "Mình thấy bạn...", "Có vẻ như bạn...", "Chắc bạn đã..."
+- Focus on feelings, not numbers - avoid "tỷ lệ", "thống kê", exact counts
+- Include gentle encouragement: "Cố gắng lên nhé", "Bạn có thể thử...", "Mình tin bạn sẽ..."
+- Format: "Mình thấy [time period] bạn [emotional observation]. [Gentle encouragement]."
+- Examples:
+  * "Mình thấy 20 ngày qua bạn có nhiều ngày cảm thấy buồn và lo lắng, chủ yếu liên quan đến công việc. Cố gắng lên nhé, bạn có thể thử các cách thư giãn để giảm stress."
+  * "Mình thấy 30 ngày qua bạn có sự cân bằng giữa cảm xúc tích cực và tiêu cực. Tiếp tục duy trì những điều mang lại niềm vui cho bạn nhé."
+
+Generate ONE warm, empathetic summary sentence:"""
+            
+            response = self.groq_client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=120
+            )
+            
+            insight = response.choices[0].message.content.strip()
+            # Clean up
+            insight = re.sub(r'^["\']|["\']$', '', insight)
+            insight = insight.strip()
+            
+            # Validate length và format
+            if not insight or len(insight) > 200:
+                # Fallback: tạo câu đơn giản dựa trên data
+                if negative_count > positive_count:
+                    trigger_text = f" liên quan đến {top_triggers[0][0]}" if top_triggers else ""
+                    return f"Cảm xúc của bạn trong thời gian này cho thấy nhiều cảm xúc tiêu cực{trigger_text}. Bạn nên thử các kỹ thuật quản lý cảm xúc."
+                elif positive_count > negative_count:
+                    return f"Cảm xúc của bạn trong thời gian này khá tích cực. Bạn nên tiếp tục duy trì các hoạt động mang lại niềm vui."
+                else:
+                    return f"Cảm xúc của bạn trong thời gian này có sự cân bằng. Bạn nên chú ý đến các yếu tố ảnh hưởng đến tâm trạng."
+            
+            return insight
+            
+        except Exception as e:
+            logger.error(f"Error generating summary insight: {str(e)}")
+            # Fallback
+            if "30 ngày" in query or "30 ngay" in query:
+                return "Cảm xúc 30 ngày qua của bạn cho thấy các xu hướng cảm xúc đáng chú ý. Bạn nên tiếp tục theo dõi và quản lý cảm xúc của mình."
+            elif "7 ngày" in query or "7 ngay" in query:
+                return "Cảm xúc 7 ngày qua của bạn cho thấy các mô hình cảm xúc. Bạn nên chú ý đến các yếu tố ảnh hưởng đến tâm trạng."
+            else:
+                return "Cảm xúc của bạn cho thấy các xu hướng đáng chú ý. Bạn nên tiếp tục theo dõi và quản lý cảm xúc của mình."
+    
     def _format_context(self, context_docs: List[Dict]) -> str:
         """
         Format context documents for prompt
@@ -448,7 +686,7 @@ Generate ONE suggestion sentence:"""
         # Sort by relevance score (descending)
         sources.sort(key=lambda x: x['relevance_score'], reverse=True)
         
-        logger.info(f"Formatted {len(sources)} sources: categories={[s['category'] for s in sources[:3]]}")
+        logger.debug(f"Formatted {len(sources)} sources")
         return sources
     
     async def health_check(self) -> Dict[str, Any]:

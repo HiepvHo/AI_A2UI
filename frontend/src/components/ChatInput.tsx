@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Send } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -26,24 +29,26 @@ export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t bg-white p-4">
-      <div className="flex gap-2">
-        <input
+    <form onSubmit={handleSubmit} className="border-t bg-background p-4 shadow-sm">
+      <div className="flex gap-2 max-w-6xl mx-auto">
+        <Input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Nhập câu hỏi của bạn..."
           disabled={disabled}
-          className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="flex-1 rounded-full"
         />
-        <button
+        <Button
           type="submit"
           disabled={disabled || !input.trim()}
-          className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+          size="icon"
+          className="rounded-full h-10 w-10 shrink-0"
         >
-          Gửi
-        </button>
+          <Send className="h-4 w-4" />
+          <span className="sr-only">Gửi</span>
+        </Button>
       </div>
     </form>
   );

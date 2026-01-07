@@ -1,6 +1,6 @@
 """
 Emotion Chatbot Configuration
-Cau hinh cho AI chatbot cam xuc voi Gemini + Pinecone + PostgreSQL
+Cau hinh cho AI chatbot cam xuc voi Groq (Llama 3.3 70B) + Pinecone + PostgreSQL
 """
 
 import os

@@ -4,7 +4,7 @@ import type { A2UIBlock } from '@/types/chatbot';
 import TextBlock from './TextBlock';
 import CardBlock from './CardBlock';
 import ListBlock from './ListBlock';
-import ChartBlock from './ChartBlock';
+import InteractiveChartBlock from './InteractiveChartBlock';
 import ButtonBlock from './ButtonBlock';
 import DividerBlock from './DividerBlock';
 
@@ -23,7 +23,7 @@ export default function A2UIRenderer({ blocks, onButtonClick }: A2UIRendererProp
       case 'list':
         return <ListBlock key={block.id || index} block={block} />;
       case 'chart':
-        return <ChartBlock key={block.id || index} block={block} />;
+        return <InteractiveChartBlock key={block.id || index} block={block} />;
       case 'button':
         return (
           <ButtonBlock

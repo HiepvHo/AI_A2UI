@@ -42,17 +42,16 @@ class ChartGenerator:
         Returns:
             Plotly chart spec (JSON)
         """
-        logger.info(f"Generating chart: type={chart_type}, title={title}, data_rows={len(data)}")
-        logger.debug(f"Columns: x={x_column}, y={y_column}")
+        logger.debug(f"Generating chart: type={chart_type}, rows={len(data)}")
         
         if not data:
-            logger.warning(f"No data provided for chart: {title}")
+            logger.warning("No data for chart")
             return self._empty_chart(title)
         
         # Auto-detect columns neu chua co
         if not x_column or not y_column:
             x_column, y_column = self._auto_detect_columns(data, chart_type)
-            logger.info(f"Auto-detected columns: x={x_column}, y={y_column}")
+            logger.debug(f"Auto-detected: x={x_column}, y={y_column}")
         
         # Serialize data (xu ly date/time)
         data = self._serialize_data(data)
@@ -70,10 +69,10 @@ class ChartGenerator:
             elif chart_type == 'table':
                 chart_spec = self._table_chart(data, title)
             else:
-                logger.warning(f"Unknown chart_type={chart_type}, using bar chart")
+                logger.warning(f"Unknown chart_type, using bar")
                 chart_spec = self._bar_chart(data, x_column, y_column, title)
             
-            logger.info(f"Chart generated successfully: type={chart_type}, has_data={bool(chart_spec.get('data'))}, has_layout={bool(chart_spec.get('layout'))}")
+            logger.debug(f"Chart generated: {chart_type}")
             return chart_spec
         except Exception as e:
             logger.error(f"Chart generation failed: {str(e)}")

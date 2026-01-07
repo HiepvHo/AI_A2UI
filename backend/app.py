@@ -6,13 +6,14 @@ FastAPI application for AI-powered chatbot with RAG capabilities
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import chatbot
+from .routers import analytics
 from .config.config import APP_NAME, APP_VERSION
 
 # Initialize FastAPI application
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
-    description="AI-powered chatbot with Retrieval-Augmented Generation (RAG) using Gemini AI and Pinecone",
+    description="AI-powered chatbot with Retrieval-Augmented Generation (RAG) using Groq Llama 3.3 70B and Pinecone",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -32,6 +33,11 @@ app.include_router(
     prefix="/api/v1/chatbot", 
     tags=["chatbot"]
 )
+app.include_router(
+    analytics.router,
+    prefix="/api/v1/analytics",
+    tags=["analytics"]
+)
 
 
 @app.get("/", tags=["root"])
@@ -40,7 +46,7 @@ async def root():
     return {
         "name": APP_NAME,
         "version": APP_VERSION,
-        "description": "RAG Chatbot API with Gemini AI and Pinecone",
+        "description": "RAG Chatbot API with Groq Llama 3.3 70B and Pinecone",
         "docs": "/docs",
         "health": "/health"
     }
@@ -63,14 +69,13 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     """Application startup event handler."""
-    print(f"{APP_NAME} v{APP_VERSION} starting up...")
-    print("RAG Chatbot API is ready to serve requests")
+    print(f"{APP_NAME} v{APP_VERSION} started")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event handler."""
     try:
-        print(f"{APP_NAME} shutting down...")
+        print(f"{APP_NAME} shutdown")
     except Exception:
         pass

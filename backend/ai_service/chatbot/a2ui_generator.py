@@ -182,14 +182,15 @@ class A2UIGenerator:
                     chart_id=chart_id,
                     title=chart_title
                 ))
-                logger.info(f"[A2UI] Added chart block: chart_id={chart_id}")
+                logger.debug(f"A2UI chart block: {chart_id}")
             else:
-                logger.warning(f"[A2UI] Invalid chart_spec: missing data or layout. Spec keys: {chart_spec.keys() if chart_spec else 'None'}")
+                logger.warning(f"Invalid chart_spec")
         
-        # 3. Insights card (neu co)
+        # 3. Insights card (neu co) - Câu chốt cho câu hỏi của user
         if 'insights' in response_data and response_data['insights']:
+            # insights là câu chốt ngắn gọn về kết quả, không phải mô tả SQL
             blocks.append(self.create_card_block(
-                title="Nhan xet",
+                title="Nhận xét",
                 description=response_data['insights'],
                 color="#10B981",
                 icon=None
@@ -209,7 +210,7 @@ class A2UIGenerator:
         if len(blocks) > 0:
             blocks.append(self.create_divider_block())
         
-        logger.info(f"Generated {len(blocks)} A2UI blocks: types={[b.get('type') for b in blocks]}")
+        logger.debug(f"A2UI: {len(blocks)} blocks")
         return blocks
     
     def _generate_id(self) -> str:

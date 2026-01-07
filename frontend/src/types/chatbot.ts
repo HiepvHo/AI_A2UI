@@ -99,7 +99,53 @@ export interface ChatResponse {
 export interface Message {
   id: string;
   query: string;
-  response: ChatResponse;
+  response: ChatResponse | null; // null khi đang loading
   timestamp: Date;
+}
+
+// Analytics types
+export interface AnalyticsRecord {
+  date: string | null;
+  intensity: number | null;
+  emotion_labels: string[];
+  triggers: string[];
+  topic_name?: string | null;
+  note?: string | null;
+}
+
+export interface AnalyticsSummaryResponse {
+  success: boolean;
+  data: AnalyticsRecord[];
+  row_count: number;
+  chart_type: string;
+  x_column: string;
+  y_column: string;
+  explanation?: string | null;
+}
+
+export interface EmotionOptionsResponse {
+  success: boolean;
+  emotions: string[];
+}
+
+export interface ExplainChartRequest {
+  user_id: number;
+  date_from?: string;
+  date_to?: string;
+  point_date?: string;
+  emotion?: string;
+  trigger?: string;
+  topic_id?: number;
+}
+
+export interface ExplainChartResponse {
+  success: boolean;
+  explanation: string;
+  data_summary: {
+    row_count: number;
+    avg_intensity?: number;
+    top_emotions?: Array<{ emotion: string; count: number }>;
+    top_triggers?: Array<{ trigger: string; count: number }>;
+  };
 }
 

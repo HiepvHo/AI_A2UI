@@ -37,7 +37,7 @@ class ChatResponse(BaseModel):
 
 class HealthStatus(BaseModel):
     """Model for system health status."""
-    gemini_api: bool = Field(..., description="Gemini API connectivity status")
+    llm_api: bool = Field(..., description="LLM API (Groq) connectivity status")
     embedding_system: bool = Field(..., description="Embedding system status")
     pinecone_connection: bool = Field(..., description="Pinecone vector database status")
     overall: bool = Field(..., description="Overall system health")
@@ -113,11 +113,6 @@ async def chat(request: ChatRequest):
         )
 
 
-# NOTE: Indexing endpoints removed
-# Use scripts/index_documents.py to index PDF/Word documents
-# No web crawling needed for this project
-
-
 @router.get("/health", response_model=HealthStatus)
 async def health_check():
     """
@@ -142,7 +137,7 @@ async def health_check():
             pinecone_status = False
         
         health_status = HealthStatus(
-            gemini_api=rag_health.get('gemini_api', False),
+            llm_api=rag_health.get('llm_api', False),
             embedding_system=rag_health.get('embedding_system', False),
             pinecone_connection=pinecone_status,
             overall=rag_health.get('overall', False) and pinecone_status,
@@ -154,7 +149,7 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return HealthStatus(
-            gemini_api=False,
+            llm_api=False,
             embedding_system=False,
             pinecone_connection=False,
             overall=False,
@@ -192,7 +187,7 @@ async def initialize_system(recreate_index: bool = False):
                 "message": "Chatbot system initialized successfully",
                 "components": {
                     "embedding_system": health.get('embedding_system', False),
-                    "gemini_api": health.get('gemini_api', False)
+                    "llm_api": health.get('llm_api', False)
                 }
             }
         else:
@@ -248,13 +243,9 @@ async def get_system_stats():
         return stats
         
     except Exception as e:
-        logger.error(f"Error getting system stats: {str(e)}")
+        logger.error(f"Stats error: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get system stats: {str(e)}"
         )
 
-
-# NOTE: Index management endpoints removed
-# Use Pinecone Console to manage index manually
-# Or use scripts/index_documents.py with recreate_index parameter

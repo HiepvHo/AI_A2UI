@@ -15,6 +15,9 @@ from ...config.config import (
     EMBEDDING_DIMENSION
 )
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingManager:
@@ -53,9 +56,9 @@ class EmbeddingManager:
             if recreate_index:
                 try:
                     self.pinecone_client.delete_index(self.index_name)
-                    print(f"Deleted existing index: {self.index_name}")
+                    logger.debug(f"Deleted index: {self.index_name}")
                 except Exception as e:
-                    print(f"Could not delete index: {e}")
+                    logger.debug(f"Delete index error: {e}")
             
             # Create new index if not exists
             if self.index_name not in self.pinecone_client.list_indexes().names():
@@ -65,14 +68,17 @@ class EmbeddingManager:
                     metric="cosine",
                     spec=ServerlessSpec(cloud="aws", region="us-east-1")
                 )
-                print(f"Created index: {self.index_name}")
+                logger.debug(f"Created index: {self.index_name}")
             else:
-                print(f"Index {self.index_name} already exists")
+                logger.debug(f"Index exists: {self.index_name}")
             
-            # Initialize embedding model
-            print(f"Loading embedding model: {EMBEDDING_MODEL}")
-            self.embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-            print("Embedding model loaded successfully")
+            # Initialize embedding model (chỉ load 1 lần duy nhất)
+            if self.embedding_model is None:
+                logger.info(f"Loading embedding model: {EMBEDDING_MODEL}")
+                self.embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+                logger.info("Embedding model loaded")
+            else:
+                logger.debug("Model already loaded")
             
         except Exception as e:
             raise RuntimeError(f"Failed to initialize embedding manager: {str(e)}")
@@ -105,11 +111,11 @@ class EmbeddingManager:
                 ids.append(text_data.get('id', f"doc_{i}_{int(time.time())}"))
             
             if not texts_to_embed:
-                print("No valid documents to embed")
+                logger.warning("No valid documents to embed")
                 return False
             
             # Generate embeddings
-            print(f"Embedding {len(texts_to_embed)} documents...")
+            logger.info(f"Embedding {len(texts_to_embed)} documents...")
             embeddings = self.embedding_model.encode(
                 texts_to_embed,
                 batch_size=self.batch_size,
@@ -137,11 +143,11 @@ class EmbeddingManager:
                 batch = vectors[i:i + batch_size]
                 index.upsert(vectors=batch)
             
-            print(f"Successfully embedded and stored {len(texts_to_embed)} documents")
+            logger.info(f"Embedded {len(texts_to_embed)} documents")
             return True
             
         except Exception as e:
-            print(f"Error embedding texts: {str(e)}")
+            logger.error(f"Embedding error: {str(e)}")
             return False
     
     async def search_similar(self, query: str, top_k: int = 5) -> List[Dict]:
@@ -184,7 +190,7 @@ class EmbeddingManager:
             return documents
             
         except Exception as e:
-            print(f"Error searching: {str(e)}")
+            logger.error(f"Search error: {str(e)}")
             return []
     
     async def health_check(self) -> Dict[str, Any]:
@@ -220,31 +226,36 @@ class EmbeddingManager:
         return status
 
 
-# Global instance
+# Global instance với lock để tránh race condition
 _embedding_manager = None
+_init_lock = asyncio.Lock()
 
 
 async def get_embedding_manager() -> EmbeddingManager:
-    """Get or create global embedding manager instance"""
+    """
+    Get or create global embedding manager instance (singleton pattern)
+    
+    CRITICAL: Model chỉ được load 1 lần duy nhất khi server start.
+    Tất cả requests sau sẽ reuse instance đã có.
+    """
     global _embedding_manager
     
-    if _embedding_manager is None:
+    # Nếu đã có instance và đã initialize, return ngay
+    if _embedding_manager is not None and _embedding_manager.embedding_model is not None:
+        return _embedding_manager
+    
+    # Dùng lock để tránh race condition khi nhiều request đồng thời
+    async with _init_lock:
+        # Double-check sau khi acquire lock
+        if _embedding_manager is not None and _embedding_manager.embedding_model is not None:
+            return _embedding_manager
+        
+        # Tạo instance mới và initialize
+        logger.info("Creating EmbeddingManager instance")
         _embedding_manager = EmbeddingManager()
         await _embedding_manager.initialize()
+        logger.info("EmbeddingManager initialized")
     
     return _embedding_manager
 
 
-async def index_website_data(base_url: str = None, crawled_data: List[Dict] = None) -> bool:
-    """
-    Index website data (deprecated - use index_documents.py script instead)
-    
-    Args:
-        base_url: Base URL (not used)
-        crawled_data: Crawled data (not used)
-        
-    Returns:
-        False (deprecated)
-    """
-    print("WARNING: index_website_data is deprecated. Use scripts/index_documents.py instead.")
-    return False

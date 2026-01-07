@@ -6,7 +6,10 @@ Query expansion + multi-query search + deduplication
 
 from typing import List, Dict, Optional
 from groq import Groq
+import logging
 from ...config.config import GROQ_API_KEY, LLM_MODEL
+
+logger = logging.getLogger(__name__)
 
 
 class EnhancedRetrieval:
@@ -51,17 +54,17 @@ class EnhancedRetrieval:
             )
             expanded_text = response.choices[0].message.content.strip()
             
-            # Parse response
+            # Phan tich response
             queries = [q.strip() for q in expanded_text.split('|') if q.strip()]
             
-            # Add original query
+            # Them original query
             all_queries = [query] + queries[:3]  # Max 4 queries total
             
             return all_queries
             
         except Exception as e:
-            print(f"Query expansion error: {e}")
-            return [query]  # Fallback to original
+            logger.error(f"Query expansion error: {e}")
+            return [query]  # Quay ve original
     
     async def search_with_expansion(
         self, 
@@ -81,33 +84,33 @@ class EnhancedRetrieval:
             List documents da deduplicate
         """
         try:
-            # Step 1: Expand query
+            # Buoc 1: Mo rong query
             expanded_queries = await self.expand_query(query)
-            print(f"Expanded queries: {expanded_queries}")
+            logger.debug(f"Expanded queries: {expanded_queries}")
             
-            # Step 2: Search with each query
+            # Buoc 2: Tim kiem voi moi query
             all_chunks = []
             seen_ids = set()
             
             for exp_query in expanded_queries:
                 chunks = await embedding_manager.search_similar(exp_query, top_k=top_k * 2)
                 
-                # Deduplicate by ID
+                # Loai bo trung lap theo ID
                 for chunk in chunks:
                     chunk_id = chunk.get('id')
                     if chunk_id and chunk_id not in seen_ids:
                         all_chunks.append(chunk)
                         seen_ids.add(chunk_id)
             
-            # Step 3: Sort by relevance score (cao nhat truoc)
+            # Buoc 3: Sap xep theo diem relevance (cao nhat truoc)
             all_chunks.sort(key=lambda x: x.get('score', 0), reverse=True)
             
-            # Step 4: Return top K
+            # Buoc 4: Tra ve top K
             return all_chunks[:top_k]
             
         except Exception as e:
-            print(f"Enhanced retrieval error: {e}")
-            # Fallback to basic search
+            logger.error(f"Enhanced retrieval error: {e}")  
+            # Quay ve basic search
             return await embedding_manager.search_similar(query, top_k=top_k)
 
 

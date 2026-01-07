@@ -43,7 +43,8 @@ frontend/
 │   │   │   ├── TextBlock.tsx
 │   │   │   ├── CardBlock.tsx
 │   │   │   ├── ListBlock.tsx
-│   │   │   ├── ChartBlock.tsx  # Plotly chart renderer
+│   │   │   ├── InteractiveChartBlock.tsx  # Interactive Plotly chart renderer
+│   │   │   ├── ChartDetailPanel.tsx  # Chart detail panel
 │   │   │   ├── ButtonBlock.tsx
 │   │   │   └── DividerBlock.tsx
 │   │   ├── ChatMessage.tsx     # Message component

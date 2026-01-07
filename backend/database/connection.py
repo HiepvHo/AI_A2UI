@@ -9,11 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database URL from docker-compose
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://HiepData:123456@localhost:5442/db_chatbotllm"
-)
+# Database URL from environment variables
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("kiem tra DB_URL trong env")
 
 # Create async engine
 engine = create_async_engine(
