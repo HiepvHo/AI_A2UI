@@ -10,8 +10,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -19,6 +19,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Allow frontend source folders
+!frontend/src/lib/
+!frontend/public/
 
 # Virtual Environment
 venv/
