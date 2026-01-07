@@ -8,9 +8,18 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
+  className?: string;
+  inputClassName?: string;
+  placeholder?: string;
 }
 
-export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
+export default function ChatInput({
+  onSendMessage,
+  disabled,
+  className = '',
+  inputClassName = '',
+  placeholder = 'Nhập câu hỏi của bạn...',
+}: ChatInputProps) {
   const [input, setInput] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
@@ -29,16 +38,19 @@ export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t bg-background p-4 shadow-sm">
+    <form
+      onSubmit={handleSubmit}
+      className={`border-t bg-background p-4 shadow-sm ${className}`}
+    >
       <div className="flex gap-2 max-w-6xl mx-auto">
         <Input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Nhập câu hỏi của bạn..."
+          placeholder={placeholder}
           disabled={disabled}
-          className="flex-1 rounded-full"
+          className={`flex-1 rounded-full ${inputClassName}`}
         />
         <Button
           type="submit"

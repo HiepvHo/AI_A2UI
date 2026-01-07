@@ -70,7 +70,13 @@ export default function InteractiveChartBlock({ block }: InteractiveChartBlockPr
       });
 
       if (response.data && response.data.length > 0) {
-        // Update chart với data mới - đảm bảo luôn có onClick handler
+        // Theme-ready chart data
+        const palettePrimary = '#6EE7F9';
+        const foreground = '#E6ECF5';
+        const muted = '#8B94A7';
+        const grid = 'rgba(148,163,184,0.15)';
+        const bg = 'rgba(15,23,42,0.65)';
+
         const newChartData = {
           data: [
             {
@@ -78,17 +84,87 @@ export default function InteractiveChartBlock({ block }: InteractiveChartBlockPr
               y: response.data.map((d) => d.intensity),
               type: 'scatter',
               mode: 'lines+markers',
-              marker: { color: '#0ea5e9' },
+              line: { color: palettePrimary, shape: 'spline', smoothing: 0.6, width: 2 },
+              marker: { color: palettePrimary, size: 7, line: { color: '#0F172A', width: 1 } },
+              hovertemplate:
+                '<b>%{y:.2f}</b><br>Ngày: %{x}<extra></extra>',
               name: 'Mức độ cảm xúc',
             },
           ],
           layout: {
+            autosize: true,
+            responsive: true,
+            paper_bgcolor: bg,
+            plot_bgcolor: bg,
+            margin: { l: 50, r: 20, t: 40, b: 50 },
+            font: { family: 'Inter, system-ui, -apple-system, sans-serif', color: foreground, size: 13 },
+            title: {
+              text: block.title || 'Phân tích cảm xúc',
+              font: { size: 16, color: foreground, family: 'Inter, system-ui, -apple-system, sans-serif' },
+              x: 0,
+              xanchor: 'left',
+            },
+            hovermode: 'x unified',
+            hoverlabel: {
+              bgcolor: 'rgba(15,23,42,0.9)',
+              bordercolor: palettePrimary,
+              font: { color: foreground },
+            },
+            dragmode: 'pan',
+            hoverdistance: 30,
+            spikedistance: 30,
+            xaxis: {
+              title: { text: 'Ngày', font: { color: foreground } },
+              tickfont: { color: foreground, size: 11 },
+              gridcolor: grid,
+              zerolinecolor: grid,
+              linecolor: grid,
+              tickformat: '%b %d',
+              showspikes: true,
+              spikemode: 'across',
+              spikesnap: 'cursor',
+              spikethickness: 1,
+            },
+            yaxis: {
+              title: { text: 'Mức độ cảm xúc', font: { color: foreground } },
+              tickfont: { color: foreground, size: 11 },
+              gridcolor: grid,
+              zerolinecolor: grid,
+              linecolor: grid,
+              rangemode: 'tozero',
+              showspikes: true,
+              spikemode: 'across',
+              spikethickness: 1,
+            },
+            legend: {
+              bgcolor: 'rgba(15,23,42,0.6)',
+              bordercolor: 'rgba(148,163,184,0.25)',
+              borderwidth: 1,
+              font: { color: foreground },
+            },
+            transition: {
+              duration: 400,
+              easing: 'cubic-in-out',
+            },
             ...block.spec.layout,
-            title: block.title || 'Phân tích cảm xúc',
-            xaxis: { title: 'Ngày' },
-            yaxis: { title: 'Mức độ cảm xúc', rangemode: 'tozero' },
           },
-          config: block.spec.config || {},
+          config: {
+            displayModeBar: true,
+            displaylogo: false,
+            responsive: true,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            scrollZoom: true,
+            doubleClick: 'reset',
+            toImageButtonOptions: {
+              format: 'png',
+              filename: 'chart',
+              height: 600,
+              width: 1200,
+              scale: 2,
+              bgcolor: 'rgba(15,23,42,0)',
+            },
+            ...block.spec.config,
+          },
         };
         setChartData(newChartData);
         setIsInitialLoad(false);
@@ -189,7 +265,7 @@ export default function InteractiveChartBlock({ block }: InteractiveChartBlockPr
   try {
     return (
       <div className="mb-4">
-        <div className="font-semibold text-gray-800 mb-2">
+        <div className="font-semibold text-[#E6ECF5] mb-2">
           {block.title || 'Phân tích cảm xúc 30 ngày qua'}
         </div>
 
@@ -242,7 +318,7 @@ export default function InteractiveChartBlock({ block }: InteractiveChartBlockPr
 
         {/* Chart - chỉ render khi chartData đã được load */}
         {chartData && chartData.data && (
-          <div className="bg-white p-3 rounded-lg border border-gray-200">
+          <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-800 shadow-inner">
             <Plot
               ref={plotRef}
               data={chartData.data}
@@ -255,6 +331,7 @@ export default function InteractiveChartBlock({ block }: InteractiveChartBlockPr
                 displayModeBar: true,
                 responsive: true,
                 ...chartData.config,
+                locale: 'vi',
               }}
               style={{ width: '100%', height: '400px' }}
               useResizeHandler={true}

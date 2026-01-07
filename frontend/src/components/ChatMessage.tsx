@@ -17,9 +17,9 @@ export default function ChatMessage({ query, response, isUser }: ChatMessageProp
   if (isUser) {
     return (
       <div className="flex justify-end mb-4">
-        <Card className="max-w-[70%] bg-primary text-primary-foreground border-primary">
+        <Card className="max-w-full bg-primary text-primary-foreground border-0 rounded-none shadow-md">
           <CardContent className="p-3">
-            <p className="text-sm">{query}</p>
+            <p className="text-sm text-[#E6ECF5]">{query}</p>
           </CardContent>
         </Card>
       </div>
@@ -33,7 +33,7 @@ export default function ChatMessage({ query, response, isUser }: ChatMessageProp
 
   return (
     <div className="flex justify-start mb-4">
-      <Card className="max-w-[85%]">
+      <Card className="max-w-full bg-slate-900/80 border-0 rounded-none text-foreground shadow-md">
         <CardContent className="p-4">
           {/* Crisis Alert */}
           {response.crisis_detected && (
@@ -50,7 +50,7 @@ export default function ChatMessage({ query, response, isUser }: ChatMessageProp
           {response.a2ui_blocks && response.a2ui_blocks.length > 0 ? (
             <A2UIRenderer blocks={response.a2ui_blocks} />
           ) : (
-            <p className="text-foreground whitespace-pre-wrap">{response.answer}</p>
+            <p className="whitespace-pre-wrap text-[#E6ECF5]">{response.answer}</p>
           )}
 
           {/* Processing Time */}
